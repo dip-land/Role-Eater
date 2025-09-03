@@ -36,7 +36,7 @@ async fn main() {
 }
 
 
-// All these structs are for later
+// All these structs are for later and will be for postgres
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Guild {
     guild_id: String,
@@ -46,11 +46,12 @@ pub struct Guild {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+// this struct is for roles created by users using commands or for indicating what roles are admin roles
 pub struct GuildRole {
     role_id: String,
     guild_id: String,
-    creator_id: String,
-    name: String,
+    creator_id: Option<String>,
+    name: Option<String>,
     color: String,
     is_admin: bool
 }
@@ -65,11 +66,14 @@ pub struct User {
     message_count: i64,
     voice_time: f64,
     total: f64,
+    // this is for getting voice time, will be null/None when a user isn't in a channel
     voice_channel_id: Option<String>,
+    // this will also be null/None when a user isn't in a channel
     voice_channel_join_time: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+// Most likely asset is going to be a base64 image stored in my database
 pub struct UserAsset {
     user_id: String,
     guild_id: String,
