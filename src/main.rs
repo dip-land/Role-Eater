@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serenity::prelude::*;
+use tokio_postgres::{Client as PGClient, NoTls};
 
 use dotenv::dotenv;
 #[macro_use]
@@ -35,19 +36,36 @@ async fn main() {
     }
 }
 
+pub async fn create_client() -> Result<PGClient, tokio_postgres::Error> {
+    let (client, connection) = match tokio_postgres::connect(
+        &format!("postgresql://{}:{}@localhost/role_eater", dotenv!("PG_USER"), dotenv!("PG_PASSWORD")), 
+        NoTls
+    ).await {
+        Ok((client, connection)) => (client, connection),
+        Err(err) => return Err(err)
+    };
+
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+
+    Ok(client)
+}
+
 
 // All these structs are for later and will be for postgres
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Guild {
     guild_id: String,
     name: String,
-    icon: String,
+    icon: Option<String>,
     stat_exclusion_channels: Vec<String>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-// this struct is for roles created by users using commands or for indicating what roles are admin roles
-pub struct GuildRole {
+pub struct Role {
     role_id: String,
     guild_id: String,
     creator_id: Option<String>,
@@ -66,14 +84,11 @@ pub struct User {
     message_count: i64,
     voice_time: f64,
     total: f64,
-    // this is for getting voice time, will be null/None when a user isn't in a channel
     voice_channel_id: Option<String>,
-    // this will also be null/None when a user isn't in a channel
     voice_channel_join_time: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-// Most likely asset is going to be a base64 image stored in my database
 pub struct UserAsset {
     user_id: String,
     guild_id: String,
@@ -109,7 +124,7 @@ pub struct ActivityTimeHistory {
 
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct StatHistory {
+pub struct VoiceMessageHistory {
     user_id: String,
     guild_id: String,
     date: String,

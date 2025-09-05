@@ -6,7 +6,7 @@ pub struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn voice_state_update(&self, ctx: Context, old: Option<VoiceState>, new: VoiceState) {
+    async fn voice_state_update(&self, _ctx: Context, old: Option<VoiceState>, new: VoiceState) {
 
     }
 }

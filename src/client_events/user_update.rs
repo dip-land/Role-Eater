@@ -6,6 +6,6 @@ pub struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn user_update(&self, ctx: Context, old: Option<CurrentUser>, new: CurrentUser) {
+    async fn user_update(&self, _ctx: Context, old: Option<CurrentUser>, new: CurrentUser) {
     }
 }
