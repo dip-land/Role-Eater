@@ -1,12 +1,5 @@
-use serenity::async_trait;
+use crate::Bot;
 use serenity::model::application::Interaction;
 use serenity::prelude::*;
 
-pub struct Handler;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn interaction_create(&self, _ctx: Context, interaction: Interaction) {
-
-    }
-}
+pub async fn interaction_create(_bot: &Bot, _ctx: Context, _interaction: Interaction) {}

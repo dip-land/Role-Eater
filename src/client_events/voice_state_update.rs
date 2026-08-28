@@ -1,12 +1,11 @@
-use serenity::async_trait;
+use crate::Bot;
 use serenity::model::voice::VoiceState;
 use serenity::prelude::*;
 
-pub struct Handler;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn voice_state_update(&self, _ctx: Context, old: Option<VoiceState>, new: VoiceState) {
-
-    }
+pub async fn voice_state_update(
+    _bot: &Bot,
+    _ctx: Context,
+    _old: Option<VoiceState>,
+    _new: VoiceState,
+) {
 }

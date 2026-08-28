@@ -1,133 +1,138 @@
-use serde::{Deserialize, Serialize};
+use crate::client_events::Bot;
+use ::serenity::all::GuildId;
+use ::serenity::gateway::ActivityData;
+use dotenvy::{dotenv, var};
+use poise::serenity_prelude as serenity;
+use sea_orm::Database;
 use serenity::prelude::*;
-use tokio_postgres::{Client as PGClient, NoTls};
+use std::{sync::Arc, time::Duration};
 
-use dotenv::dotenv;
-#[macro_use]
-extern crate dotenv_codegen;
+pub mod client_events;
+pub mod commands;
+pub mod db;
+pub mod interactions;
 
-mod client_events;
+pub struct Data {}
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Context<'a> = poise::Context<'a, Data, Error>;
+
+async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
+    match error {
+        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
+        poise::FrameworkError::Command { error, ctx, .. } => {
+            println!("Error in command `{}`: {:?}", ctx.command().name, error,);
+        }
+        error => {
+            if let Err(e) = poise::builtins::on_error(error).await {
+                println!("Error while handling error: {}", e)
+            }
+        }
+    }
+}
+
+#[poise::command(slash_command, subcommands("child1", "child2"))]
+pub async fn parent(ctx: Context<'_>, arg: String) -> Result<(), Error> {
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+pub async fn child1(ctx: Context<'_>, arg: String) -> Result<(), Error> {
+    Ok(())
+}
+#[poise::command(slash_command)]
+pub async fn child2(ctx: Context<'_>, arg: String) -> Result<(), Error> {
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    
-    let intents = GatewayIntents::GUILDS | 
-        GatewayIntents::GUILD_MESSAGES | 
-        GatewayIntents::MESSAGE_CONTENT | 
-        GatewayIntents::GUILD_MEMBERS | 
-        GatewayIntents::GUILD_VOICE_STATES | 
-        GatewayIntents::GUILD_PRESENCES;
 
-    let mut client =
-        Client::builder(&dotenv!("TOKEN"), intents)
-        .event_handler(client_events::guild_create::Handler)
-        .event_handler(client_events::guild_update::Handler)
-        .event_handler(client_events::interaction_create::Handler)
-        .event_handler(client_events::message::Handler)
-        .event_handler(client_events::presence_update::Handler)
-        .event_handler(client_events::user_update::Handler)
-        .event_handler(client_events::voice_state_update::Handler)
-        .await.expect("Err creating client");
+    let intents = GatewayIntents::GUILDS
+        | GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILD_MEMBERS
+        | GatewayIntents::GUILD_VOICE_STATES
+        | GatewayIntents::GUILD_PRESENCES;
 
-    // Start listening for events by starting a single shard
-    if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
-    }
-}
+    let database_connection = Database::connect(var("DATABASE_URL").unwrap())
+        .await
+        .unwrap();
 
-pub async fn create_client() -> Result<PGClient, tokio_postgres::Error> {
-    let (client, connection) = match tokio_postgres::connect(
-        &format!("postgresql://{}:{}@localhost/role_eater", dotenv!("PG_USER"), dotenv!("PG_PASSWORD")), 
-        NoTls
-    ).await {
-        Ok((client, connection)) => (client, connection),
-        Err(err) => return Err(err)
+    let bot = Bot {
+        version: env!("CARGO_PKG_VERSION"),
+        database: database_connection,
     };
 
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
-        }
-    });
+    let commands = vec![parent()];
 
-    Ok(client)
-}
+    let poise_options = poise::FrameworkOptions {
+        commands,
+        prefix_options: poise::PrefixFrameworkOptions {
+            prefix: Some("~".into()),
+            edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(
+                Duration::from_secs(3600),
+            ))),
+            additional_prefixes: vec![
+                poise::Prefix::Literal("hey bot,"),
+                poise::Prefix::Literal("hey bot"),
+            ],
+            ..Default::default()
+        },
+        on_error: |error| Box::pin(on_error(error)),
+        pre_command: |ctx| {
+            Box::pin(async move {
+                println!("Executing command {}...", ctx.command().qualified_name);
+            })
+        },
+        post_command: |ctx| {
+            Box::pin(async move {
+                println!("Executed command {}!", ctx.command().qualified_name);
+            })
+        },
+        command_check: Some(|ctx| {
+            Box::pin(async move {
+                if ctx.author().id == 123456789 {
+                    return Ok(false);
+                }
+                Ok(true)
+            })
+        }),
+        skip_checks_for_owners: false,
+        ..Default::default()
+    };
 
+    let framework = poise::Framework::builder()
+        .setup(move |ctx, _ready, framework| {
+            Box::pin(async move {
+                println!("Logged in as {}", _ready.user.name);
+                poise::builtins::register_in_guild(
+                    ctx,
+                    &framework.options().commands,
+                    // Test Server ID 1182260148501225552
+                    GuildId::new(1182260148501225552),
+                )
+                .await?;
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                Ok(Data {})
+            })
+        })
+        .options(poise_options)
+        .build();
 
-// All these structs are for later and will be for postgres
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Guild {
-    guild_id: String,
-    name: String,
-    icon: Option<String>,
-    stat_exclusion_channels: Vec<String>
-}
+    let mut client = Client::builder(var("TOKEN").unwrap(), intents)
+        .event_handler(bot)
+        .framework(framework)
+        .activity(ActivityData {
+            name: format!("Version {}", env!("CARGO_PKG_VERSION")),
+            kind: serenity::ActivityType::Custom,
+            state: Some(format!("Version Beta_{}", env!("CARGO_PKG_VERSION"))),
+            url: None,
+        })
+        .await
+        .expect("Err creating client");
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Role {
-    role_id: String,
-    guild_id: String,
-    creator_id: Option<String>,
-    name: Option<String>,
-    color: String,
-    is_admin: bool
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct User {
-    user_id: String,
-    guild_id: String,
-    username: String,
-    display_name: Option<String>,
-    avatar: Option<String>,
-    message_count: i64,
-    voice_time: f64,
-    total: f64,
-    voice_channel_id: Option<String>,
-    voice_channel_join_time: Option<String>
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UserAsset {
-    user_id: String,
-    guild_id: String,
-    asset: String
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ActivityGameHistory {
-    user_id: String,
-    game_title: String,
-    play_count: i64,
-    time_played: f64
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ActivityMusicHistory {
-    user_id: String,
-    song_name: String,
-    song_artist: String,
-    play_count: i64,
-    time_played: f64
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ActivityTimeHistory {
-    user_id: String,
-    date: String,
-    game_time: Option<f64>,
-    game_count: Option<i64>,
-    music_time: Option<f64>,
-    music_count: Option<i64>
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct VoiceMessageHistory {
-    user_id: String,
-    guild_id: String,
-    date: String,
-    message_count: i64,
-    voice_time: f64
+    if let Err(err) = client.start().await {
+        println!("Client error: {err:?}");
+    }
 }
