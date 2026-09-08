@@ -7,7 +7,7 @@ edition = "2024"
 anyhow = "1.0.104"
 chrono = { version = "0.4.45", features = ["now"] }
 dotenvy = "0.15.7"
-poise = "0.6.2"
+poise = "0.7.0"
 sea-orm = { version = "2.0.2", features = [ "sqlx-postgres", "runtime-tokio", "macros", "with-chrono", "with-json" ] }
 serde = { version = "1.0.229", features = ["derive"] }
 serenity = { version = "0.12.5", features = ["builder", "chrono", "utils"] }
