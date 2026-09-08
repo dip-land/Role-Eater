@@ -1,4 +1,4 @@
-DROP SCHEMA "global" CASCADE;
+DROP TABLE "global".activity_history, "global".activity_time_history, "global".activity_user_data, "global".guild_data, "global".roles CASCADE;
 DROP SCHEMA users CASCADE;
 
 CREATE SCHEMA "global";
@@ -96,7 +96,6 @@ CREATE TABLE users.voice_message_history (
 	CONSTRAINT voice_message_history_pk PRIMARY KEY (user_id, guild_id, date)
 );
 
-ALTER TABLE "global".activity_data OWNER TO postgres;
 ALTER TABLE "global".activity_history OWNER TO postgres;
 ALTER TABLE "global".activity_time_history OWNER TO postgres;
 ALTER TABLE "global".activity_user_data OWNER TO postgres;

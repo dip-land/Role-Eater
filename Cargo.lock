@@ -2264,7 +2264,7 @@ dependencies = [
 
 [[package]]
 name = "role_eater"
-version = "2026.8.1"
+version = "2026.8.2"
 dependencies = [
  "anyhow",
  "chrono",

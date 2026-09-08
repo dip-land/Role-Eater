@@ -27,8 +27,8 @@ pub struct Model {
     #[sea_orm(default_value = "false")]
     pub user_left: bool,
     pub leave_date: Option<DateTimeWithTimeZone>,
-    #[sea_orm(default_value = "14")]
-    pub leave_deletion_duration: Decimal,
+    #[sea_orm(default_value = "365")]
+    pub leave_deletion_duration: i32,
     #[sea_orm(default_value = "true")]
     pub message_data: bool,
     #[sea_orm(default_value = "true")]

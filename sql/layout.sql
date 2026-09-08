@@ -37,6 +37,8 @@ CREATE TABLE "global".guild_data (
 	icon varchar NULL,
 	banner varchar NULL,
 	stat_exclusion_channels _varchar NOT NULL,
+	join_log varchar NULL,
+	leave_log varchar NULL,
 	CONSTRAINT guild_data_pkey PRIMARY KEY (guild_id)
 );
 
@@ -75,7 +77,7 @@ CREATE TABLE users.user_data (
 	creation_date timestamptz NULL,
 	user_left bool DEFAULT false NOT NULL,
 	leave_date timestamptz NULL,
-	leave_deletion_duration numeric DEFAULT 14 NOT NULL,
+	leave_deletion_duration int4 DEFAULT 365 NOT NULL,
 	message_data bool DEFAULT true NOT NULL,
 	voice_data bool DEFAULT true NOT NULL,
 	game_data bool DEFAULT true NOT NULL,
