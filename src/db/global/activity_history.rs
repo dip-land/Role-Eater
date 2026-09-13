@@ -8,7 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub user_id: String,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub activity: i32,
+    pub activity: i64,
     #[sea_orm(column_type = "Double")]
     pub time_played: f64,
 }
