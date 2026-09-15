@@ -83,7 +83,6 @@ async fn run(bot: &Bot, ctx: Context) -> mongodb::error::Result<()> {
     let collection: Collection<Document> = mdb.collection(&"1110754252315435070");
     let cursor = collection.find(doc! {}).await.unwrap();
     let all: Vec<_> = cursor.try_collect().await?;
-    let mut i = 1;
     for doc in &all {
         let id = doc.get_str("id").unwrap();
         let guild_id = "1110754252315435070";
@@ -447,10 +446,8 @@ async fn run(bot: &Bot, ctx: Context) -> mongodb::error::Result<()> {
                 .exec(&bot.database)
                 .await;
         }
-
-        println!("{} / {}", i, all.len() - 1);
-        i = i + 1;
     }
+    println!("SYNC COMPLETE");
     Ok(())
 }
 
