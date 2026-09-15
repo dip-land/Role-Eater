@@ -3,16 +3,18 @@ use ::serenity::all::GuildId;
 use ::serenity::gateway::ActivityData;
 use dotenvy::{dotenv, var};
 use poise::serenity_prelude as serenity;
-use sea_orm::Database;
+use sea_orm::{Database, DatabaseConnection};
 use serenity::prelude::*;
-use std::{sync::Arc, time::Duration};
 
 pub mod client_events;
 pub mod commands;
 pub mod db;
 pub mod interactions;
 
-pub struct Data {}
+pub struct Data {
+    pub version: &'static str,
+    pub database: DatabaseConnection,
+}
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
@@ -28,20 +30,6 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             }
         }
     }
-}
-
-#[poise::command(slash_command, subcommands("child1", "child2"))]
-pub async fn parent(ctx: Context<'_>, arg: String) -> Result<(), Error> {
-    Ok(())
-}
-
-#[poise::command(slash_command)]
-pub async fn child1(ctx: Context<'_>, arg: String) -> Result<(), Error> {
-    Ok(())
-}
-#[poise::command(slash_command)]
-pub async fn child2(ctx: Context<'_>, arg: String) -> Result<(), Error> {
-    Ok(())
 }
 
 #[tokio::main]
@@ -64,21 +52,12 @@ async fn main() {
         database: database_connection,
     };
 
-    let commands = vec![parent()];
+    let database_connection = Database::connect(var("DATABASE_URL").unwrap())
+        .await
+        .unwrap();
 
     let poise_options = poise::FrameworkOptions {
-        commands,
-        prefix_options: poise::PrefixFrameworkOptions {
-            prefix: Some("~".into()),
-            edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(
-                Duration::from_secs(3600),
-            ))),
-            additional_prefixes: vec![
-                poise::Prefix::Literal("hey bot,"),
-                poise::Prefix::Literal("hey bot"),
-            ],
-            ..Default::default()
-        },
+        commands: commands::get_commands(),
         on_error: |error| Box::pin(on_error(error)),
         pre_command: |ctx| {
             Box::pin(async move {
@@ -114,7 +93,10 @@ async fn main() {
                 )
                 .await?;
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {})
+                Ok(Data {
+                    version: env!("CARGO_PKG_VERSION"),
+                    database: database_connection,
+                })
             })
         })
         .options(poise_options)

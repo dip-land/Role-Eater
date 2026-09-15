@@ -1,14 +1,21 @@
 [package]
 name = "role_eater"
-version = "2026.8.2"
+version = "2026.9.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
 chrono = { version = "0.4.45", features = ["now"] }
 dotenvy = "0.15.7"
+image = "0.25.10"
+numfmt = "1.2.0"
 poise = "0.7.0"
-sea-orm = { version = "2.0.2", features = [ "sqlx-postgres", "runtime-tokio", "macros", "with-chrono", "with-json" ] }
+reqwest = { version = "0.13.5", features = ["stream", "native-tls"] }
+sea-orm = { version = "2.0.3", features = [ "sqlx-postgres", "runtime-tokio", "macros", "with-chrono", "with-json" ] }
 serde = { version = "1.0.229", features = ["derive"] }
 serenity = { version = "0.12.5", features = ["builder", "chrono", "utils"] }
+skia-rs  = { version = "0.4.0", features = ["codec-png", "svg", "text", "webgpu"] }
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
+
+[patch.crates-io]
+skia-rs = { git = "https://github.com/dip-land/skia-rs.git" }

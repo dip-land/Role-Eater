@@ -21,7 +21,7 @@ pub async fn increment_user(
         .await?;
     let mut update_user: users::user_data::ActiveModel = update_user.unwrap().into();
 
-    update_user.total = Set(update_user.total.unwrap() + 1f64);
+    update_user.total = Set(update_user.total.unwrap() + 1.0);
     update_user.message_count = Set(update_user.message_count.unwrap() + 1);
 
     update_user.update(db).await
