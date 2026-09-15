@@ -1,19 +1,26 @@
 use crate::Bot;
-use crate::db::{global::*, users::*};
-use chrono::{DateTime, NaiveDate};
-use sea_orm::{ActiveValue::NotSet, DbErr, InsertResult, sea_query::OnConflict};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-use serenity::all::GuildId;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use serenity::{all::UserId, futures::TryStreamExt};
-use std::collections::HashMap;
 
+#[cfg(not(debug_assertions))]
+use crate::db::{global::*, users::*};
+#[cfg(not(debug_assertions))]
+use chrono::{DateTime, NaiveDate};
 #[cfg(not(debug_assertions))]
 use mongodb::{
     Client, Collection,
     bson::{Document, doc},
 };
+#[cfg(not(debug_assertions))]
+use sea_orm::{ActiveValue::NotSet, DbErr, InsertResult, sea_query::OnConflict};
+#[cfg(not(debug_assertions))]
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+#[cfg(not(debug_assertions))]
+use serenity::all::GuildId;
+#[cfg(not(debug_assertions))]
+use serenity::{all::UserId, futures::TryStreamExt};
+#[cfg(not(debug_assertions))]
+use std::collections::HashMap;
 #[cfg(not(debug_assertions))]
 use tokio_cron_scheduler::{Job, JobScheduler};
 
@@ -27,38 +34,44 @@ pub async fn ready(bot: &Bot, ctx: Context, data_about_bot: Ready) {
         println!("v.{}\n{:?}", bot.version, data_about_bot);
     } else {
         println!("v.{} ONLINE", bot.version);
-        let mut sched = JobScheduler::new().await.unwrap();
-
-        let bot = bot.clone();
-        let ctx = ctx.clone();
-
-        sched
-            .add(
-                Job::new_async("0 */15 * * * *", move |_uuid, _lock| {
-                    let bot = bot.clone();
-                    let ctx = ctx.clone();
-
-                    Box::pin(async move {
-                        if let Err(error) = run(&bot, ctx).await {
-                            eprintln!("Scheduled activity update failed: {error}");
-                        }
-                    })
-                })
-                .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        sched.shutdown_on_ctrl_c();
-
-        sched.set_shutdown_handler(Box::new(|| {
-            Box::pin(async move {
-                println!("Jobs Shut Down!");
-            })
-        }));
-
-        sched.start().await.unwrap();
+        #[cfg(not(debug_assertions))]
+        scheduler(bot.clone(), ctx.clone()).await;
     }
+}
+
+#[cfg(not(debug_assertions))]
+pub async fn scheduler(bot: &Bot, ctx: Context) {
+    let mut sched = JobScheduler::new().await.unwrap();
+
+    let bot = bot.clone();
+    let ctx = ctx.clone();
+
+    sched
+        .add(
+            Job::new_async("0 */15 * * * *", move |_uuid, _lock| {
+                let bot = bot.clone();
+                let ctx = ctx.clone();
+
+                Box::pin(async move {
+                    if let Err(error) = run(&bot, ctx).await {
+                        eprintln!("Scheduled activity update failed: {error}");
+                    }
+                })
+            })
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    sched.shutdown_on_ctrl_c();
+
+    sched.set_shutdown_handler(Box::new(|| {
+        Box::pin(async move {
+            println!("Jobs Shut Down!");
+        })
+    }));
+
+    sched.start().await.unwrap();
 }
 
 #[cfg(not(debug_assertions))]
