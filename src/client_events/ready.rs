@@ -35,7 +35,7 @@ pub async fn ready(bot: &Bot, ctx: Context, data_about_bot: Ready) {
     } else {
         println!("v.{} ONLINE", bot.version);
         #[cfg(not(debug_assertions))]
-        scheduler(bot.clone(), ctx.clone()).await;
+        scheduler(&bot.clone(), ctx.clone()).await;
     }
 }
 
@@ -96,8 +96,6 @@ async fn run(bot: &Bot, ctx: Context) -> mongodb::error::Result<()> {
         let guild_member = match guild.member(&ctx.http, &user).await {
             Ok(member) => Some(member),
             Err(_) => {
-                println!("{} / {}", i, all.len() - 1);
-                i = i + 1;
                 continue;
             }
         };
