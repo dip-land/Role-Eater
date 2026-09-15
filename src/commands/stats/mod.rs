@@ -453,9 +453,13 @@ async fn user_card(ctx: Context<'_>, user_id: &String) -> Option<Vec<u8>> {
     if let Some(avatar_url) = user_data.clone().unwrap().avatar {
         if let Some(avatar) = load_image_from_url(&avatar_url).await {
             canvas.save();
-            let mut builder = PathBuilder::new();
-            builder.add_round_rect(&rect, inner_border_radius, inner_border_radius);
-            canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
+            canvas.clip_round_rect(
+                &rect,
+                inner_border_radius,
+                inner_border_radius,
+                ClipOp::Intersect,
+                true,
+            );
             canvas.draw_image_rect(&avatar, None, &rect, Some(&secondary_background_paint));
             canvas.restore();
         } else {
@@ -1559,7 +1563,6 @@ fn cmp_i64(a: &i64, b: &i64) -> Ordering {
 }
 
 async fn load_image_from_url(url: &str) -> Option<Image> {
-    let start = Local::now().timestamp_millis();
     let url = url.replace("?size=1024", "?size=80");
     let response = match reqwest::get(url).await {
         Ok(data) => data,
@@ -1591,10 +1594,6 @@ async fn load_image_from_url(url: &str) -> Option<Image> {
         height,
         skia_rs::core::ColorType::Rgba8888,
         skia_rs::core::AlphaType::Premul,
-    );
-    println!(
-        "IMAGE GET: {:?}ms",
-        Local::now().timestamp_millis() - &start
     );
     Image::from_raster_data_owned(info, pixels, row_bytes)
 }
@@ -1869,8 +1868,6 @@ async fn guild_leaderboard_card(ctx: Context<'_>) -> Option<Vec<u8>> {
     let voice_total = users.iter().map(|u| u.voice_time).sum::<f64>();
     let total = users.iter().map(|u| u.total).sum::<f64>();
 
-    println!("{message_total} {voice_total} {total}");
-
     let mut num_format = Formatter::new()
         .precision(numfmt::Precision::Decimals(2))
         .separator(',')
@@ -2024,9 +2021,7 @@ async fn guild_leaderboard_card(ctx: Context<'_>) -> Option<Vec<u8>> {
     if let Some(icon_url) = guild_data.clone().unwrap().icon {
         if let Some(icon) = load_image_from_url(&icon_url).await {
             canvas.save();
-            let mut builder = PathBuilder::new();
-            builder.add_round_rect(&rect, border_radius, border_radius);
-            canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
+            canvas.clip_round_rect(&rect, border_radius, border_radius, ClipOp::Intersect, true);
             canvas.draw_image_rect(&icon, None, &rect, Some(&secondary_background_paint));
             canvas.restore();
         } else {
@@ -2397,58 +2392,31 @@ async fn guild_leaderboard_card(ctx: Context<'_>) -> Option<Vec<u8>> {
             full_inner_border_radius / 2.0,
             &quaternary_background_paint,
         );
-        let start = Local::now().timestamp_millis();
         if let Some(avatar_url) = user.avatar {
             if let Some(avatar) = avatars.iter().find(|u| &u.0 == user_id) {
-                let start = Local::now().timestamp_millis();
                 canvas.save();
-                let mut builder = PathBuilder::new();
-                builder.add_round_rect(
+                canvas.clip_round_rect(
                     &rect,
                     full_inner_border_radius / 2.0,
                     full_inner_border_radius / 2.0,
+                    ClipOp::Intersect,
+                    true,
                 );
-                canvas.clip_path(&builder.build(), ClipOp::Intersect, false);
                 canvas.draw_image_rect(&avatar.1, None, &rect, Some(&secondary_background_paint));
                 canvas.restore();
-                println!(
-                    "IMAGE DRAW: {:?}ms",
-                    Local::now().timestamp_millis() - &start
-                );
             } else {
                 if let Some(avatar) = load_image_from_url(&avatar_url).await {
-                    let start = Local::now().timestamp_millis();
                     avatars.push((user_id.clone(), avatar.clone()));
-                    let new = Local::now().timestamp_millis();
                     canvas.save();
-                    println!(
-                        "CANVAS SAVE: {:?}ms",
-                        Local::now().timestamp_millis() - &new
-                    );
-                    let new = Local::now().timestamp_millis();
-                    let mut builder = PathBuilder::new();
-                    builder.add_round_rect(
+                    canvas.clip_round_rect(
                         &rect,
                         full_inner_border_radius / 2.0,
                         full_inner_border_radius / 2.0,
+                        ClipOp::Intersect,
+                        true,
                     );
-                    println!("PATH BUILD: {:?}ms", Local::now().timestamp_millis() - &new);
-                    let new = Local::now().timestamp_millis();
-                    canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
-                    println!("CLIP PATH: {:?}ms", Local::now().timestamp_millis() - &new);
-                    let new = Local::now().timestamp_millis();
                     canvas.draw_image_rect(&avatar, None, &rect, Some(&secondary_background_paint));
-                    println!("IMAGE RECT: {:?}ms", Local::now().timestamp_millis() - &new);
-                    let new = Local::now().timestamp_millis();
                     canvas.restore();
-                    println!(
-                        "CANVAS RESTORE: {:?}ms",
-                        Local::now().timestamp_millis() - &new
-                    );
-                    println!(
-                        "IMAGE DRAW: {:?}ms",
-                        Local::now().timestamp_millis() - &start
-                    );
                 } else {
                     draw_username_letter(
                         &mut canvas,
@@ -2474,10 +2442,6 @@ async fn guild_leaderboard_card(ctx: Context<'_>) -> Option<Vec<u8>> {
                 &primary_text_paint,
             );
         }
-        println!(
-            "FULL IMAGE: {:?}ms",
-            Local::now().timestamp_millis() - &start
-        );
 
         let pos_width = user_position_font.measure_text(&format!("#{}", index + 1));
         canvas.draw_string(
@@ -2567,26 +2531,26 @@ async fn guild_leaderboard_card(ctx: Context<'_>) -> Option<Vec<u8>> {
         if let Some(avatar_url) = user.avatar {
             if let Some(avatar) = avatars.iter().find(|u| &u.0 == user_id) {
                 canvas.save();
-                let mut builder = PathBuilder::new();
-                builder.add_round_rect(
+                canvas.clip_round_rect(
                     &rect,
                     full_inner_border_radius / 2.0,
                     full_inner_border_radius / 2.0,
+                    ClipOp::Intersect,
+                    true,
                 );
-                canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
                 canvas.draw_image_rect(&avatar.1, None, &rect, Some(&secondary_background_paint));
                 canvas.restore();
             } else {
                 if let Some(avatar) = load_image_from_url(&avatar_url).await {
                     avatars.push((user_id.clone(), avatar.clone()));
                     canvas.save();
-                    let mut builder = PathBuilder::new();
-                    builder.add_round_rect(
+                    canvas.clip_round_rect(
                         &rect,
                         full_inner_border_radius / 2.0,
                         full_inner_border_radius / 2.0,
+                        ClipOp::Intersect,
+                        true,
                     );
-                    canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
                     canvas.draw_image_rect(&avatar, None, &rect, Some(&secondary_background_paint));
                     canvas.restore();
                 } else {
@@ -2703,26 +2667,26 @@ async fn guild_leaderboard_card(ctx: Context<'_>) -> Option<Vec<u8>> {
         if let Some(avatar_url) = user.avatar {
             if let Some(avatar) = avatars.iter().find(|u| &u.0 == user_id) {
                 canvas.save();
-                let mut builder = PathBuilder::new();
-                builder.add_round_rect(
+                canvas.clip_round_rect(
                     &rect,
                     full_inner_border_radius / 2.0,
                     full_inner_border_radius / 2.0,
+                    ClipOp::Intersect,
+                    true,
                 );
-                canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
                 canvas.draw_image_rect(&avatar.1, None, &rect, Some(&secondary_background_paint));
                 canvas.restore();
             } else {
                 if let Some(avatar) = load_image_from_url(&avatar_url).await {
                     avatars.push((user_id.clone(), avatar.clone()));
                     canvas.save();
-                    let mut builder = PathBuilder::new();
-                    builder.add_round_rect(
+                    canvas.clip_round_rect(
                         &rect,
                         full_inner_border_radius / 2.0,
                         full_inner_border_radius / 2.0,
+                        ClipOp::Intersect,
+                        true,
                     );
-                    canvas.clip_path(&builder.build(), ClipOp::Intersect, true);
                     canvas.draw_image_rect(&avatar, None, &rect, Some(&secondary_background_paint));
                     canvas.restore();
                 } else {
