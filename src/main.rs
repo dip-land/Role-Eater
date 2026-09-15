@@ -85,6 +85,7 @@ async fn main() {
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 println!("Logged in as {}", _ready.user.name);
+                #[cfg(debug_assertions)]
                 poise::builtins::register_in_guild(
                     ctx,
                     &framework.options().commands,
@@ -92,6 +93,7 @@ async fn main() {
                     GuildId::new(1182260148501225552),
                 )
                 .await?;
+                #[cfg(not(debug_assertions))]
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
                     version: env!("CARGO_PKG_VERSION"),
@@ -102,13 +104,18 @@ async fn main() {
         .options(poise_options)
         .build();
 
+    #[cfg(debug_assertions)]
+    let activity_state = format!("Version Beta_{}", env!("CARGO_PKG_VERSION"));
+    #[cfg(not(debug_assertions))]
+    let activity_state = format!("Version {}", env!("CARGO_PKG_VERSION"));
+
     let mut client = Client::builder(var("TOKEN").unwrap(), intents)
         .event_handler(bot)
         .framework(framework)
         .activity(ActivityData {
             name: format!("Version {}", env!("CARGO_PKG_VERSION")),
             kind: serenity::ActivityType::Custom,
-            state: Some(format!("Version Beta_{}", env!("CARGO_PKG_VERSION"))),
+            state: Some(activity_state),
             url: None,
         })
         .await
