@@ -15,9 +15,7 @@ pub async fn leaderboard(
     let message = ctx
         .send(
             CreateReply::new()
-                .content(
-                    "Loading <a:loading:1547289616208367726> (Generation takes longer in dev mode)",
-                )
+                .content("Loading <a:loading:1547289616208367726>")
                 .ephemeral(hide),
         )
         .await?;

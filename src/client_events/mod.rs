@@ -23,6 +23,7 @@ pub mod presence_update;
 pub mod ready;
 pub mod voice_state_update;
 
+#[derive(Clone)]
 pub struct Bot {
     pub version: &'static str,
     pub database: DatabaseConnection,

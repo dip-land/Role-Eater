@@ -1,6 +1,6 @@
 [package]
 name = "role_eater"
-version = "2026.9.1"
+version = "2026.9.2"
 edition = "2024"
 
 [dependencies]
@@ -16,6 +16,10 @@ serde = { version = "1.0.229", features = ["derive"] }
 serenity = { version = "0.12.5", features = ["builder", "chrono", "utils"] }
 skia-rs  = { version = "0.4.0", features = ["codec-png", "svg", "text", "webgpu"] }
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
+
+[build-dependencies]
+mongodb = "3.9.1"
+tokio-cron-scheduler = { version = "0.15.1", features = ["signal"] }
 
 [patch.crates-io]
 skia-rs = { git = "https://github.com/dip-land/skia-rs.git" }
